@@ -17,6 +17,8 @@ class FoodManagementApp(tk.Tk):
         tk.Button(self, text="Community Trades", command=self.community_trades, bg="#8e94f2", fg="#ffffff").pack(pady=10)
         tk.Button(self, text="Dietary Preferences", command=self.dietary_preferences, bg="#8e94f2", fg="#ffffff").pack(pady=10)
         tk.Button(self, text="Food Donation", command=self.food_donation, bg="#8e94f2", fg="#ffffff").pack(pady=10)
+        tk.Button(self, text="Onboarding", command=self.onboarding, bg="#8e94f2", fg="#ffffff").pack(pady=10)
+        tk.Button(self, text="Profile Management", command=self.profile_management, bg="#8e94f2", fg="#ffffff").pack(pady=10)
 
     def scan_barcode(self):
         messagebox.showinfo("Scan Barcode", "Barcode scanning functionality")
@@ -32,6 +34,12 @@ class FoodManagementApp(tk.Tk):
 
     def food_donation(self):
         messagebox.showinfo("Food Donation", "Donate food")
+
+    def onboarding(self):
+        messagebox.showinfo("Onboarding", "Onboarding process")
+
+    def profile_management(self):
+        messagebox.showinfo("Profile Management", "Manage profile")
 
     def clear_screen(self):
         for widget in self.winfo_children():
