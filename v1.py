@@ -3,13 +3,13 @@ from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 import pytesseract
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
 class FoodManagementApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Food Management App")
-        self.geometry("600x600")
+        self.geometry("600x800")
         self.configure(bg="#cdd3df")
         self.meal_pool = {
             "Spaghetti Bolognese": ["Spaghetti", "Minced Meat", "Tomato Sauce", "Onions"],
@@ -50,14 +50,36 @@ class FoodManagementApp(tk.Tk):
             "Parmesan Cheese": "2024-07-05"
         }
         self.selected_ingredients = []
+        self.user_profile = {"name": "", "email": ""}
         self.logged_in = False
-        self.user_data = {}
-        self.home_screen()
+        self.current_step = 0
+        self.onboarding_steps = [
+            "Welcome to the Food Management App",
+            "Scan barcodes and expiry dates",
+            "Generate meals with AI",
+            "Engage with the community",
+            "Manage your profile and settings"
+        ]
+        self.onboarding_screen()
 
     def clear_screen(self):
         """Clear all widgets from the screen."""
         for widget in self.winfo_children():
             widget.destroy()
+
+    def onboarding_screen(self):
+        """Display the onboarding screen with navigation buttons."""
+        self.clear_screen()
+        if self.current_step < len(self.onboarding_steps):
+            tk.Label(self, text=self.onboarding_steps[self.current_step], font=("Helvetica", 20, "bold"), bg="#cdd3df", fg="#000000").pack(pady=30)
+            tk.Button(self, text="Next", font=("Helvetica", 14), command=self.next_onboarding_step, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+        else:
+            self.home_screen()
+
+    def next_onboarding_step(self):
+        """Move to the next step in the onboarding process."""
+        self.current_step += 1
+        self.onboarding_screen()
 
     def home_screen(self):
         """Display the home screen with main options."""
@@ -69,6 +91,7 @@ class FoodManagementApp(tk.Tk):
             ("Suggest Ingredients", self.suggest_ingredients_screen),
             ("Community Engagement", self.community_engagement_screen),
             ("Voice Commands", self.voice_commands_screen),
+            ("Profile", self.profile_screen),
             ("Settings", self.settings_screen)
         ]
         for text, command in buttons:
@@ -131,6 +154,7 @@ class FoodManagementApp(tk.Tk):
             chk.pack(pady=2)
             self.selected_ingredients.append((ingredient, var))
         tk.Button(scroll_frame, text="Generate Meal", command=self.generate_meal_based_on_selection, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+
         self.generated_meal_label = tk.Label(scroll_frame, text="", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b")
         self.generated_meal_label.pack(pady=10)
 
@@ -139,19 +163,19 @@ class FoodManagementApp(tk.Tk):
         tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
 
     def generate_meal_based_on_selection(self):
-        """Generate a meal based on selected ingredients."""
-        selected_ingredients = [ingredient for ingredient, var in self.selected_ingredients if var.get()]
-        matching_meals = [meal for meal, ingredients in self.meal_pool.items() if all(ingredient in selected_ingredients for ingredient in ingredients)]
-        if matching_meals:
-            generated_meal = random.choice(matching_meals)
-            self.generated_meal_label.config(text=f"Generated Meal: {generated_meal}")
+        """Generate a meal based on the selected ingredients."""
+        selected = [ingredient for ingredient, var in self.selected_ingredients if var.get()]
+        possible_meals = [meal for meal, ingredients in self.meal_pool.items() if all(item in selected for item in ingredients)]
+        if possible_meals:
+            meal = random.choice(possible_meals)
+            self.generated_meal_label.config(text=f"Suggested Meal: {meal}\nIngredients: {', '.join(self.meal_pool[meal])}")
         else:
-            self.generated_meal_label.config(text="No matching meals found with the selected ingredients.")
+            self.generated_meal_label.config(text="No meals can be generated with the selected ingredients.")
 
     def suggest_ingredients_screen(self):
-        """Screen to suggest ingredients."""
+        """Screen to suggest additional ingredients for meals."""
         self.clear_screen()
-        tk.Label(self, text="Suggest Ingredients", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
+        tk.Label(self, text="Suggested Ingredients", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
 
         # Create a canvas and scrollbar for scrolling functionality
         canvas = tk.Canvas(self, bg="#cdd3df")
@@ -225,6 +249,25 @@ class FoodManagementApp(tk.Tk):
         """Execute the given voice command."""
         messagebox.showinfo("Voice Command", f"You said: {command}")
 
+    def profile_screen(self):
+        """Screen for user profile management."""
+        self.clear_screen()
+        tk.Label(self, text="Profile", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
+        tk.Label(self, text="Name:", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
+        self.name_entry = tk.Entry(self, font=("Helvetica", 12), bg="#ffffff", fg="#23395b")
+        self.name_entry.pack(pady=10)
+        tk.Label(self, text="Email:", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
+        self.email_entry = tk.Entry(self, font=("Helvetica", 12), bg="#ffffff", fg="#23395b")
+        self.email_entry.pack(pady=10)
+        tk.Button(self, text="Save", command=self.save_profile, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+
+    def save_profile(self):
+        """Save the user's profile information."""
+        self.user_profile["name"] = self.name_entry.get()
+        self.user_profile["email"] = self.email_entry.get()
+        messagebox.showinfo("Profile Saved", "Your profile has been updated.")
+
     def settings_screen(self):
         """Screen for settings and preferences."""
         self.clear_screen()
@@ -243,25 +286,30 @@ class FoodManagementApp(tk.Tk):
         """Screen to set dietary preferences and allergies."""
         self.clear_screen()
         tk.Label(self, text="Dietary Preferences and Allergies", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
-        tk.Label(self, text="Set your dietary preferences and allergies here.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
-        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+        tk.Label(self, text="Select your dietary preferences and allergies.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
+        tk.Checkbutton(self, text="Vegetarian", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=2)
+        tk.Checkbutton(self, text="Vegan", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=2)
+        tk.Checkbutton(self, text="Gluten-Free", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=2)
+        tk.Checkbutton(self, text="Nut Allergy", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=2)
+        tk.Button(self, text="Save", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
 
     def manage_shopping_list_screen(self):
         """Screen to manage the shopping list."""
         self.clear_screen()
         tk.Label(self, text="Manage Shopping List", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
-        tk.Label(self, text="Manage your shopping list here.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
+        tk.Label(self, text="Your shopping list is currently empty.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
         tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
 
     def food_donation_screen(self):
-        """Screen for food donation system."""
+        """Screen for the food donation system."""
         self.clear_screen()
         tk.Label(self, text="Food Donation System", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
-        tk.Label(self, text="Manage food donations here.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
+        tk.Label(self, text="Donate food to those in need.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
+        tk.Button(self, text="Donate Now", command=lambda: messagebox.showinfo("Thank You", "Your donation has been accepted."), width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
         tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
 
     def other_preferences_screen(self):
-        """Screen for other user preferences."""
+        """Screen for other preferences and settings."""
         self.clear_screen()
         tk.Label(self, text="Other Preferences", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
         tk.Label(self, text="Set other preferences here.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
