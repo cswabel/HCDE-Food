@@ -1,54 +1,20 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
 import pytesseract
-import random
+from pyzbar.pyzbar import decode
+from datetime import datetime
+import re
+from tkinter import ttk
 
 class FoodManagementApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Food Management App")
-        self.geometry("600x600")
-        self.configure(bg="#cdd3df")
-        self.meal_pool = {
-            "Spaghetti Bolognese": ["Spaghetti", "Minced Meat", "Tomato Sauce", "Onions"],
-            "Chicken Salad": ["Chicken", "Lettuce", "Tomatoes", "Cucumber", "Olive Oil"],
-            "Vegetable Stir Fry": ["Broccoli", "Carrots", "Bell Peppers", "Soy Sauce", "Garlic"],
-            "Pancakes": ["Flour", "Milk", "Eggs", "Butter", "Maple Syrup"],
-            "Omelette": ["Eggs", "Cheese", "Ham", "Bell Peppers"],
-            "Grilled Cheese Sandwich": ["Bread", "Cheese", "Butter"],
-            "French Toast": ["Bread", "Eggs", "Milk", "Cinnamon", "Maple Syrup"],
-            "Caesar Salad": ["Lettuce", "Croutons", "Chicken", "Caesar Dressing", "Parmesan Cheese"]
-        }
-        self.ingredients = {
-            "Spaghetti": "2024-06-10",
-            "Minced Meat": "2024-06-05",
-            "Tomato Sauce": "2024-06-20",
-            "Onions": "2024-06-15",
-            "Chicken": "2024-06-08",
-            "Lettuce": "2024-06-07",
-            "Tomatoes": "2024-06-10",
-            "Cucumber": "2024-06-12",
-            "Olive Oil": "2024-07-01",
-            "Broccoli": "2024-06-11",
-            "Carrots": "2024-06-14",
-            "Bell Peppers": "2024-06-13",
-            "Soy Sauce": "2024-07-20",
-            "Garlic": "2024-06-25",
-            "Flour": "2024-12-01",
-            "Milk": "2024-06-05",
-            "Eggs": "2024-06-04",
-            "Butter": "2024-08-01",
-            "Maple Syrup": "2024-12-10",
-            "Cheese": "2024-06-18",
-            "Ham": "2024-06-06",
-            "Bread": "2024-06-03",
-            "Cinnamon": "2024-12-25",
-            "Croutons": "2024-07-15",
-            "Caesar Dressing": "2024-07-10",
-            "Parmesan Cheese": "2024-07-05"
-        }
-        self.selected_ingredients = []
+        self.geometry("800x600")
+        self.create_widgets()
+
+    def create_widgets(self):
         self.home_screen()
 
     def clear_screen(self):
@@ -57,201 +23,224 @@ class FoodManagementApp(tk.Tk):
 
     def home_screen(self):
         self.clear_screen()
-        tk.Label(self, text="Welcome to the Food Management App", font=("Helvetica", 20, "bold"), bg="#cdd3df", fg="#000000").pack(pady=30)
-        buttons = [
-            ("Scan Barcode/Expiry Date", self.scan_barcode_expiry_date_screen),
-            ("AI Meal Generator", self.ai_meal_generator_screen),
-            ("Suggest Ingredients", self.suggest_ingredients_screen),
-            ("Community Engagement", self.community_engagement_screen),
-            ("Voice Commands", self.voice_commands_screen),
-            ("Settings", self.settings_screen)
-        ]
-        for text, command in buttons:
-            tk.Button(self, text=text, font=("Helvetica", 14), command=command, width=30, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=10)
+        tk.Label(self, text="Welcome to the Food Management App", font=("Helvetica", 16)).pack(pady=20)
+
+        tk.Button(self, text="Scan Barcode/Expiry Date", command=self.scan_barcode_expiry_date_screen, width=30).pack(pady=10)
+        tk.Button(self, text="AI Meal Generator", command=self.ai_meal_generator_screen, width=30).pack(pady=10)
+        tk.Button(self, text="Suggest Ingredients", command=self.suggest_ingredients_screen, width=30).pack(pady=10)
+        tk.Button(self, text="Community Engagement", command=self.community_engagement_screen, width=30).pack(pady=10)
+        tk.Button(self, text="Voice Commands", command=self.voice_commands_screen, width=30).pack(pady=10)
+        tk.Button(self, text="Settings", command=self.settings_screen, width=30).pack(pady=10)
 
     def scan_barcode_expiry_date_screen(self):
         self.clear_screen()
-        tk.Label(self, text="Scan Barcode/Expiry Date", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
-        tk.Button(self, text="Choose Image", command=self.choose_image, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=10)
-        self.image_label = tk.Label(self, bg="#cdd3df")
+        tk.Label(self, text="Scan Barcode/Expiry Date", font=("Helvetica", 16)).pack(pady=20)
+        tk.Button(self, text="Choose Image", command=self.load_image).pack(pady=10)
+        self.image_label = tk.Label(self)
         self.image_label.pack(pady=10)
-        self.result_label = tk.Label(self, text="", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b")
+        self.result_label = tk.Label(self, text="")
         self.result_label.pack(pady=10)
-        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+        tk.Button(self, text="Back to Home", command=self.home_screen).pack(pady=20)
 
-    def choose_image(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg *.png")])
+    def load_image(self):
+        file_path = filedialog.askopenfilename()
         if file_path:
             image = Image.open(file_path)
             image.thumbnail((400, 400))
-            photo = ImageTk.PhotoImage(image)
-            self.image_label.config(image=photo)
-            self.image_label.image = photo
-            self.process_image(image)
+            self.photo = ImageTk.PhotoImage(image)
+            self.image_label.config(image=self.photo)
 
-    def process_image(self, image):
-        result = pytesseract.image_to_string(image)
-        self.result_label.config(text=f"Decoded text: {result}")
+            self.decode_barcode(file_path)
+            self.extract_expiry_date(file_path)
+
+    def decode_barcode(self, image_path):
+        image = Image.open(image_path)
+        decoded_objects = decode(image)
+        for obj in decoded_objects:
+            barcode_info = f"Type: {obj.type}, Data: {obj.data.decode('utf-8')}"
+            self.result_label.config(text=barcode_info)
+
+    def extract_expiry_date(self, image_path):
+        image = Image.open(image_path)
+        text = pytesseract.image_to_string(image)
+        expiry_date = self.find_expiry_date(text)
+        if expiry_date:
+            expiry_info = f"Expiry Date: {expiry_date.strftime('%d/%m/%Y')}"
+            self.result_label.config(text=expiry_info)
+
+    def find_expiry_date(self, text):
+        date_patterns = [
+            r'\b(\d{2}/\d{2}/\d{4})\b',  # Format: DD/MM/YYYY
+            r'\b(\d{2}-\d{2}-\d{4})\b',  # Format: DD-MM-YYYY
+            r'\b(\d{4}/\d{2}/\d{2})\b',  # Format: YYYY/MM/DD
+        ]
+
+        for pattern in date_patterns:
+            match = re.search(pattern, text)
+            if match:
+                date_str = match.group(1)
+                try:
+                    expiry_date = datetime.strptime(date_str, "%d/%m/%Y")
+                    return expiry_date
+                except ValueError:
+                    try:
+                        expiry_date = datetime.strptime(date_str, "%d-%m-%Y")
+                        return expiry_date
+                    except ValueError:
+                        try:
+                            expiry_date = datetime.strptime(date_str, "%Y/%m/%d")
+                            return expiry_date
+                        except ValueError:
+                            continue
+
+        return None
 
     def ai_meal_generator_screen(self):
         self.clear_screen()
-        tk.Label(self, text="AI Meal Generator", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
+        tk.Label(self, text="AI Meal Generator", font=("Helvetica", 16)).pack(pady=20)
+        items = self.get_items_sorted_by_expiry_date()
+        tk.Label(self, text="Items sorted by expiry date:").pack(pady=10)
+        for item in items:
+            tk.Label(self, text=item).pack()
+        meals = self.generate_meals(items)
+        tk.Label(self, text="Suggested Meals:").pack(pady=10)
+        for meal in meals:
+            tk.Label(self, text=meal).pack()
+        tk.Button(self, text="Back to Home", command=self.home_screen).pack(pady=20)
 
-        # Create a canvas and scrollbar for scrolling functionality
-        canvas = tk.Canvas(self, bg="#cdd3df")
-        scrollbar = tk.Scrollbar(self, orient="vertical", command=canvas.yview)
-        scroll_frame = tk.Frame(canvas, bg="#cdd3df")
+    def get_items_sorted_by_expiry_date(self):
+        return ["Milk (Exp: 2024-05-25)", "Eggs (Exp: 2024-05-24)", "Bread (Exp: 2024-05-23)"]
 
-        scroll_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
-            )
-        )
-
-        canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        # Generate a meal based on the ingredients and expiry dates
-        tk.Label(scroll_frame, text="Select Ingredients:", font=("Helvetica", 14), bg="#cdd3df", fg="#23395b").pack(pady=10)
-        self.selected_ingredients = []
-        for ingredient, expiry in sorted(self.ingredients.items(), key=lambda x: x[1]):
-            var = tk.BooleanVar()
-            chk = tk.Checkbutton(scroll_frame, text=f"{ingredient} (Exp: {expiry})", variable=var, font=("Helvetica", 12), bg="#cdd3df", fg="#23395b", onvalue=True, offvalue=False)
-            chk.var = var
-            chk.pack(pady=2)
-            self.selected_ingredients.append((ingredient, var))
-        tk.Button(scroll_frame, text="Generate Meal", command=self.generate_meal_based_on_selection, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
-        self.generated_meal_label = tk.Label(scroll_frame, text="", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b")
-        self.generated_meal_label.pack(pady=10)
-
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
-
-    def generate_meal_based_on_selection(self):
-        selected_ingredients = [ingredient for ingredient, var in self.selected_ingredients if var.get()]
-        matching_meals = [meal for meal, ingredients in self.meal_pool.items() if all(ingredient in selected_ingredients for ingredient in ingredients)]
-        if matching_meals:
-            generated_meal = random.choice(matching_meals)
-            self.generated_meal_label.config(text=f"Generated Meal: {generated_meal}")
-        else:
-            self.generated_meal_label.config(text="No matching meals found with the selected ingredients.")
+    def generate_meals(self, items):
+        return ["French Toast", "Omelette", "Bread Pudding"]
 
     def suggest_ingredients_screen(self):
         self.clear_screen()
-        tk.Label(self, text="Suggest Ingredients", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
+        tk.Label(self, text="Suggest Ingredients", font=("Helvetica", 16)).pack(pady=20)
+        available_ingredients = self.get_available_ingredients()
+        tk.Label(self, text="Available Ingredients:").pack(pady=10)
+        for ingredient in available_ingredients:
+            tk.Label(self, text=ingredient).pack()
+        missing_ingredients = self.check_nearby_reduced_aisle_items(available_ingredients)
+        tk.Label(self, text="Suggested Ingredients to Buy:").pack(pady=10)
+        for ingredient in missing_ingredients:
+            tk.Label(self, text=ingredient).pack()
+        tk.Button(self, text="Back to Home", command=self.home_screen).pack(pady=20)
 
-        # Create a canvas and scrollbar for scrolling functionality
-        canvas = tk.Canvas(self, bg="#cdd3df")
-        scrollbar = tk.Scrollbar(self, orient="vertical", command=canvas.yview)
-        scroll_frame = tk.Frame(canvas, bg="#cdd3df")
+    def get_available_ingredients(self):
+        return ["Tomatoes", "Cheese", "Pasta"]
 
-        scroll_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
-            )
-        )
-
-        canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        suggested_ingredients = ["Bread", "Butter"]
-        tk.Label(scroll_frame, text="Suggested Ingredients:", font=("Helvetica", 14), bg="#cdd3df", fg="#23395b").pack(pady=10)
-        for ingredient in suggested_ingredients:
-            tk.Label(scroll_frame, text=ingredient, font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=2)
-
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+    def check_nearby_reduced_aisle_items(self, available_ingredients):
+        return ["Olive Oil", "Garlic", "Basil"]
 
     def community_engagement_screen(self):
         self.clear_screen()
-        tk.Label(self, text="Community Engagement", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
+        tk.Label(self, text="Community Engagement", font=("Helvetica", 16)).pack(pady=20)
+        near_date_items = self.get_near_date_items()
+        tk.Label(self, text="Near-Date Items Available for Trade:").pack(pady=10)
+        for item in near_date_items:
+            tk.Label(self, text=item).pack()
+        self.earn_credits_for_sharing()
+        self.view_community_trades()
+        tk.Button(self, text="Back to Home", command=self.home_screen).pack(pady=20)
 
-        # Create a canvas and scrollbar for scrolling functionality
-        canvas = tk.Canvas(self, bg="#cdd3df")
-        scrollbar = tk.Scrollbar(self, orient="vertical", command=canvas.yview)
-        scroll_frame = tk.Frame(canvas, bg="#cdd3df")
+    def get_near_date_items(self):
+        return ["Yogurt (Exp: 2024-05-22)", "Butter (Exp: 2024-05-21)"]
 
-        scroll_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
-            )
-        )
+    def earn_credits_for_sharing(self):
+        tk.Label(self, text="You have earned credits for sharing items.").pack(pady=10)
 
-        canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        items_for_trade = ["Milk", "Eggs"]
-        tk.Label(scroll_frame, text="Near-Date Items Available for Trade:", font=("Helvetica", 14), bg="#cdd3df", fg="#23395b").pack(pady=10)
-        for item in items_for_trade:
-            tk.Label(scroll_frame, text=item, font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=2)
-        tk.Label(scroll_frame, text="You have earned credits for sharing items.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
-        tk.Label(scroll_frame, text="Community Trades:", font=("Helvetica", 14), bg="#cdd3df", fg="#23395b").pack(pady=10)
-        community_trades = ["User1 traded Yogurt for Bread"]
-        for trade in community_trades:
-            tk.Label(scroll_frame, text=trade, font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=2)
-
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+    def view_community_trades(self):
+        tk.Label(self, text="Community Trades:").pack(pady=10)
+        tk.Label(self, text="User1 traded Yogurt for Bread").pack()
 
     def voice_commands_screen(self):
         self.clear_screen()
-        tk.Label(self, text="Voice Commands", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
-        tk.Label(self, text="Voice Commands Activated. Please speak your command.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
-        command = tk.Entry(self, font=("Helvetica", 12), bg="#ffffff", fg="#23395b")
+        tk.Label(self, text="Voice Commands", font=("Helvetica", 16)).pack(pady=20)
+        tk.Label(self, text="Voice Commands Activated. Please speak your command.").pack(pady=10)
+        command = tk.Entry(self)
         command.pack(pady=10)
-        tk.Button(self, text="Execute", command=lambda: self.execute_voice_command(command.get()), width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=10)
-        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+        tk.Button(self, text="Execute", command=lambda: self.execute_voice_command(command.get())).pack(pady=10)
+        tk.Button(self, text="Back to Home", command=self.home_screen).pack(pady=20)
 
     def execute_voice_command(self, command):
-        messagebox.showinfo("Voice Command", f"You said: {command}")
+        if "scan" in command.lower():
+            self.scan_barcode_expiry_date_screen()
+        elif "meal" in command.lower():
+            self.ai_meal_generator_screen()
+        elif "suggest" in command.lower():
+            self.suggest_ingredients_screen()
+        elif "community" in command.lower():
+            self.community_engagement_screen()
+        elif "settings" in command.lower():
+            self.settings_screen()
+        else:
+            messagebox.showerror("Error", "Command not recognized.")
 
     def settings_screen(self):
         self.clear_screen()
-        tk.Label(self, text="Settings", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
-        buttons = [
-            ("Set Dietary Preferences and Allergies", self.dietary_preferences_screen),
-            ("Manage Shopping List", self.manage_shopping_list_screen),
-            ("Food Donation System", self.food_donation_screen),
-            ("Other Preferences", self.other_preferences_screen)
-        ]
-        for text, command in buttons:
-            tk.Button(self, text=text, font=("Helvetica", 14), command=command, width=30, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=10)
-        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+        tk.Label(self, text="Settings", font=("Helvetica", 16)).pack(pady=20)
+        tk.Button(self, text="Set Dietary Preferences and Allergies", command=self.set_dietary_preferences_and_allergies, width=30).pack(pady=10)
+        tk.Button(self, text="Manage Shopping List", command=self.manage_shopping_list, width=30).pack(pady=10)
+        tk.Button(self, text="Food Donation System", command=self.food_donation_system, width=30).pack(pady=10)
+        tk.Button(self, text="Other Preferences", command=self.other_preferences, width=30).pack(pady=10)
+        tk.Button(self, text="Back to Home", command=self.home_screen).pack(pady=20)
 
-    def dietary_preferences_screen(self):
-        self.clear_screen()
-        tk.Label(self, text="Dietary Preferences and Allergies", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
-        # Mockup content for dietary preferences
-        tk.Label(self, text="Set your dietary preferences and allergies here.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
-        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+    def set_dietary_preferences_and_allergies(self):
+        messagebox.showinfo("Settings", "Set your dietary preferences and allergies here.")
 
-    def manage_shopping_list_screen(self):
-        self.clear_screen()
-        tk.Label(self, text="Manage Shopping List", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
-        # Mockup content for shopping list
-        tk.Label(self, text="Manage your shopping list here.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
-        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+    def manage_shopping_list(self):
+        messagebox.showinfo("Settings", "Manage your shopping list here.")
 
-    def food_donation_screen(self):
-        self.clear_screen()
-        tk.Label(self, text="Food Donation System", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
-        # Mockup content for food donation
-        tk.Label(self, text="Manage food donations here.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
-        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+    def food_donation_system(self):
+        messagebox.showinfo("Settings", "Donate food to those in need here.")
 
-    def other_preferences_screen(self):
-        self.clear_screen()
-        tk.Label(self, text="Other Preferences", font=("Helvetica", 16, "bold"), bg="#cdd3df", fg="#000000").pack(pady=20)
-        # Mockup content for other preferences
-        tk.Label(self, text="Set other preferences here.", font=("Helvetica", 12), bg="#cdd3df", fg="#23395b").pack(pady=10)
-        tk.Button(self, text="Back to Home", command=self.home_screen, width=20, height=2, bg="#8e94f2", fg="#ffffff", activebackground="#5469b6", relief="flat").pack(pady=20)
+    def other_preferences(self):
+        messagebox.showinfo("Settings", "Set other preferences here.")
 
 if __name__ == "__main__":
     app = FoodManagementApp()
     app.mainloop()
+
+    class FoodManagementApp(tk.Tk):
+        def __init__(self):
+            super().__init__()
+            self.title("Food Management App")
+            self.geometry("800x600")
+            self.configure(bg="white")  # Set background color to white
+            self.create_widgets()
+
+        def create_widgets(self):
+            self.home_screen()
+
+        def clear_screen(self):
+            for widget in self.winfo_children():
+                widget.destroy()
+
+        def home_screen(self):
+            self.clear_screen()
+            tk.Label(self, text="Welcome to the Food Management App", font=("Helvetica", 16), bg="white").pack(pady=20)
+
+            tk.Button(self, text="Scan Barcode/Expiry Date", command=self.scan_barcode_expiry_date_screen, width=30, bg="lightblue").pack(pady=10)
+            tk.Button(self, text="AI Meal Generator", command=self.ai_meal_generator_screen, width=30, bg="lightgreen").pack(pady=10)
+            tk.Button(self, text="Suggest Ingredients", command=self.suggest_ingredients_screen, width=30, bg="lightyellow").pack(pady=10)
+            tk.Button(self, text="Community Engagement", command=self.community_engagement_screen, width=30, bg="lightpink").pack(pady=10)
+            tk.Button(self, text="Voice Commands", command=self.voice_commands_screen, width=30, bg="lightpurple").pack(pady=10)
+            tk.Button(self, text="Settings", command=self.settings_screen, width=30, bg="lightorange").pack(pady=10)
+
+        def scan_barcode_expiry_date_screen(self):
+            self.clear_screen()
+            tk.Label(self, text="Scan Barcode/Expiry Date", font=("Helvetica", 16), bg="white").pack(pady=20)
+            tk.Button(self, text="Choose Image", command=self.load_image, bg="lightblue").pack(pady=10)
+            self.image_label = tk.Label(self)
+            self.image_label.pack(pady=10)
+            self.result_label = tk.Label(self, text="", bg="white")
+            self.result_label.pack(pady=10)
+            tk.Button(self, text="Back to Home", command=self.home_screen, bg="lightgray").pack(pady=20)
+
+        # Rest of the code...
+        self.mainloop()
+
+    if __name__ == "__main__":
+        app = FoodManagementApp()
+        app.mainloop()
